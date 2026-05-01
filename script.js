@@ -4,6 +4,7 @@ import {
   getAuth,
   GoogleAuthProvider,
   onAuthStateChanged,
+  signInWithRedirect,
   signInWithPopup,
   signOut
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
@@ -86,6 +87,7 @@ const prefGrid = document.getElementById("prefGrid");
 const themeToggle = document.getElementById("themeToggle");
 const menuBtn = document.getElementById("menuBtn");
 const navLinks = document.getElementById("navLinks");
+const authStatus = document.getElementById("authStatus");
 
 let selectedCategory = "All";
 let currentUser = null;
@@ -164,16 +166,47 @@ function initTheme() {
   }
 }
 
+function setAuthStatus(message) {
+  authStatus.textContent = message;
+}
+
+function getFriendlyAuthError(error) {
+  if (!error?.code) {
+    return "Login failed. Please try again.";
+  }
+  if (error.code === "auth/unauthorized-domain") {
+    return "This domain is not authorized in Firebase. Add it under Authentication > Settings > Authorized domains.";
+  }
+  if (error.code === "auth/popup-blocked") {
+    return "Popup was blocked. Redirecting to sign-in...";
+  }
+  if (error.code === "auth/popup-closed-by-user") {
+    return "Sign-in popup was closed before completing login.";
+  }
+  return `Login failed (${error.code}).`;
+}
+
 async function handleAuthAction() {
   try {
     if (currentUser) {
       await signOut(auth);
+      setAuthStatus("Signed out.");
       return;
     }
+    setAuthStatus("Opening sign-in...");
     await signInWithPopup(auth, provider);
+    setAuthStatus("Signed in.");
   } catch (error) {
     console.error("Authentication error:", error);
-    alert("Login failed. Please try again.");
+    setAuthStatus(getFriendlyAuthError(error));
+    if (error?.code === "auth/popup-blocked") {
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (redirectError) {
+        console.error("Redirect sign-in failed:", redirectError);
+        setAuthStatus(getFriendlyAuthError(redirectError));
+      }
+    }
   }
 }
 
@@ -194,6 +227,11 @@ navLinks.querySelectorAll("a").forEach((link) => {
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
   updateLockState();
+  if (user) {
+    setAuthStatus(`Signed in as ${user.displayName || user.email || "user"}.`);
+  } else {
+    setAuthStatus("You are not signed in.");
+  }
 });
 
 initTheme();

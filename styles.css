@@ -164,6 +164,13 @@ body[data-theme="light"] .toggle-thumb {
   gap: 1.2rem;
 }
 
+.auth-status {
+  min-height: 1.2rem;
+  margin-top: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
 .panel {
   background: var(--card);
   border: 1px solid var(--border);
